@@ -35,7 +35,15 @@ phases:
       - echo Logging in to Amazon ECR.
       - aws ecr get-login-password | docker login --username AWS --password-stdin "https://${ECR_REPOS_DOMAIN}"
       - echo Docker Image ${APP_NAME} pushing to ECR on `date`
-      - docker image push ${ECR_REPOS_URI}:${IMAGE_TAG}
+      - |
+        if aws ecr describe-images \
+          --repository-name "${ECR_REPOSITORY_NAME}" \
+          --image-ids "imageTag=${IMAGE_TAG}" \
+          --region "${AWS_REGION}" >/dev/null 2>&1; then
+          echo "Image ${ECR_REPOS_URI}:${IMAGE_TAG} already exists; skipping push."
+        else
+          docker image push "${ECR_REPOS_URI}:${IMAGE_TAG}"
+        fi
       - echo '[{"name":"app","imageUri":"'$ECR_REPOS_URI':'$IMAGE_TAG'"}]'  > imagedefinitions.json
 
 artifacts:
